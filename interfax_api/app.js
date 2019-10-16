@@ -1,19 +1,16 @@
 const express = require('express')
 const bodyParser = require('body-parser')
+const methods = require('./methods/methods')
 const Axios = require('axios')
 const fs = require('fs')
 const parseXml = require('xml2js')
 const storage = require('./storage/storage')
+let config = require('./config.json')
 
-let parser = new parseXml.Parser({ explicitArray: false })
-
-const app = express()
-app.use(bodyParser.json({ limit: '15mb' }))
-app.use(bodyParser.urlencoded({ extended: true }))
+let parser = new parseXml.Parser({ explicitArray: false, ignoreAttrs: true })
 
 const url = 'http://services.ifx.ru/IFXService.svc'
 let authCookie = null
-let updateMarker = ''
 
 const xmlLogin = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:ifx="http://ifx.ru/IFX3WebService">
 <soap:Header/>
@@ -22,10 +19,10 @@ const xmlLogin = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-enve
       <ifx:mbci>client1</ifx:mbci>
       <ifx:mbcv>1.0</ifx:mbcv>
       <ifx:mbh>OnlyHeadline</ifx:mbh>
-      <ifx:mbl>k.khodov@solidbroker.ru</ifx:mbl>
+      <ifx:mbl>${config.username}</ifx:mbl>
       <ifx:mbla>ru-RU</ifx:mbla>
       <ifx:mbo>Windows</ifx:mbo>
-      <ifx:mbp>iwHPnpZ</ifx:mbp>
+      <ifx:mbp>${config.password}</ifx:mbp>
       <ifx:mbt></ifx:mbt>
    </ifx:osmreq>
 </soap:Body>
@@ -44,7 +41,7 @@ xmlGetNews = () => {
         <ifx:direction>0</ifx:direction>
         <ifx:mbcid></ifx:mbcid>
         <ifx:mblnl>100</ifx:mblnl>
-        <ifx:mbsup>${updateMarker}</ifx:mbsup>
+        <ifx:mbsup>${config.updateMarker}</ifx:mbsup>
         <ifx:sls>
            <arr:string>?</arr:string>
         </ifx:sls>
@@ -59,12 +56,12 @@ const xmlGetRubrics = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap
   </soap:Envelope>`
 
 xmlGetNewById = (id) => {
-  return `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:ifx="http://ifx.ru/IFX3WebService">
+  return `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns="http://ifx.ru/IFX3WebService">
   <soap:Header/>
   <soap:Body>
-     <ifx:genmreq>
-        <ifx:mbnid>${id}</ifx:mbnid>
-     </ifx:genmreq>
+     <genmreq>
+        <mbnid>${id}</mbnid>
+     </genmreq>
   </soap:Body>
   </soap:Envelope>`
 }
@@ -156,7 +153,12 @@ app.post('/get-newbyid', (req, res) => {
     }
   })
   .then(response => {
-    res.json(response.data)
+    parser.parseString(response.data, (err, result) => {
+      let newItem = checkInObject(result, 'mbn')
+      // console.log(newItem)
+      // console.log(typeof(newItem))
+      res.send(newItem)
+    })
   })
   .catch(err => {
     console.log('Error getting news')
@@ -199,17 +201,43 @@ const getNewsList = () => {
         console.log('New news in this chunk')
         if (Array.isArray(newsList)) {
           for (let i = 0; i < newsList.length; i++) {
-            storage.pushNewItem(newsList[i])
+            // storage.pushNewItem(newsList[i])
+            let id = newsList[i].i
+            Axios.post(url, xmlGetNewById(id), {
+              headers: {
+                'Content-Type': 'application/soap+xml;charset=UTF-8;action="http://ifx.ru/IFX3WebService/IIFXService/GetEntireNewsByID"',
+                'Cookie': authCookie
+              }
+            })
+            .then(response => {
+              parser.parseString(response.data, (err, result) => {
+                let newItem = checkInObject(result, 'mbn')
+                storage.pushNewItem(newItem)
+              })
+            })
           }
         } else {
-          storage.pushNewItem(newsList)
+          let id = newsList.i
+          Axios.post(url, xmlGetNewById(id), {
+            headers: {
+              'Content-Type': 'application/soap+xml;charset=UTF-8;action="http://ifx.ru/IFX3WebService/IIFXService/GetEntireNewsByID"',
+              'Cookie': authCookie
+            }
+          })
+          .then(response => {
+            parser.parseString(response.data, (err, result) => {
+              let newItem = checkInObject(result, 'mbn')
+              storage.pushNewItem(newItem)
+            })
+          })
         }
       } else {
         console.log('No new news in this chunk')
       }
-      updateMarker = checkInObject(result, 'grnmresp').mbnup
+      config.updateMarker = checkInObject(result, 'grnmresp').mbnup
+      fs.writeFileSync('config.json', JSON.stringify(config))
       setTimeout(() => {
-        getNewsList(updateMarker)
+        getNewsList()
       }, 30000)
     })
   })
@@ -248,7 +276,16 @@ auth()
   getNewsList()
 })
 
+app.set('port', process.env.PORT || 4000)
 
-const server = app.listen('4000', () => {
-  console.log('Server started on 3000 port')
+const server = app.listen(app.get('port'), () => {
+  console.log('Server started on ' + app.get('port') + ' port in mode: ' + process.env.NODE_ENV)
 })
+
+main = () => {
+  const app = express()
+  app.use(bodyParser.json({ limit: '15mb' }))
+  app.use(bodyParser.urlencoded({ extended: true }))  
+}
+
+main()

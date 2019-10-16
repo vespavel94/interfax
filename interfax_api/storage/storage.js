@@ -14,7 +14,13 @@ module.exports = {
     let newItem = {
       id: raw.i,
       published: raw.pd,
-      title: raw.h
+      title: raw.h,
+      body: raw.c,
+      summary: raw.c.substr(0, 50),
+      priority: raw.sp ? raw.sp : null,
+      tickers: raw.rt ? raw.rt['a:string'] : null,
+      rubrics: raw.r ? raw.r['a:string'] : null,
+      geo: raw.g ? raw.g['a:string'] : null
     }
     this.news.insert(newItem, (err, record) => {
       if (err) {
