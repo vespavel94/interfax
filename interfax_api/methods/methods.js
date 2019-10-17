@@ -58,58 +58,67 @@ module.exports = {
     })
     .then(response => {
       parser.parseString(response.data,(err, result) => {
-        let newsList = checkInObject(result, 'c_nwli')
-        if (newsList !== null) {
-          if (Array.isArray(newsList)) {
-            console.log(newsList.length + ' new news in this chunk')
-            for (let i = 0; i < newsList.length; i++) {
-              // storage.pushNewItem(newsList[i])
-              let id = newsList[i].i
-              Axios.post(url, templates.xmlGetNewById(id), {
-                headers: {
-                  'Content-Type': 'application/soap+xml;charset=UTF-8;action="http://ifx.ru/IFX3WebService/IIFXService/GetEntireNewsByID"',
-                  'Cookie': authCookie
-                }
-              })
-              .then(response => {
-                parser.parseString(response.data, (err, res) => {
-                  let newItem = checkInObject(res, 'mbn')
-                  storage.pushNewItem(newItem)
-                })
-              })
-              .catch(err => {
-                console.log("Error getting new details")
-              })
-            }
+        this.newsList = checkInObject(result, 'c_nwli')
+        if (this.newsList !== null) {
+          if (Array.isArray(this.newsList)) {
+            console.log(this.newsList.length + ' new news in this chunk')
+            this.getMultipleNews()
           } else {
-            let id = newsList.i
-            Axios.post(url, templates.xmlGetNewById(id), {
-              headers: {
-                'Content-Type': 'application/soap+xml;charset=UTF-8;action="http://ifx.ru/IFX3WebService/IIFXService/GetEntireNewsByID"',
-                'Cookie': authCookie
-              }
-            })
-            .then(response => {
-              parser.parseString(response.data, (err, res) => {
-                let newItem = checkInObject(res, 'mbn')
-                storage.pushNewItem(newItem)
-              })
-            })
-            .catch(err => {
-              console.log("Error getting new details")
-            })
+            let id = this.newsList['i']
+            this.getNewItem(id)
           }
         } else {
           console.log('No new news in this chunk')
         }
         config.updateMarker = checkInObject(result, 'grnmresp').mbnup
         fs.writeFileSync('config.json', JSON.stringify(config))
+        console.log('Update renew')
+        setTimeout(() => {
+          this.getNewsList()
+        }, 60000)
       })
     })
     .catch(err => {
       console.log(err)
       console.log('Error getting news')
-      // this.start()
+      this.start()
+    })
+  },
+
+  getNewItem (id) {
+    return new Promise((resolve, reject) => {
+      Axios.post(url, templates.xmlGetNewById(id), {
+        headers: {
+          'Content-Type': 'application/soap+xml;charset=UTF-8;action="http://ifx.ru/IFX3WebService/IIFXService/GetEntireNewsByID"',
+          'Cookie': authCookie
+        }
+      })
+      .then(response => {
+        parser.parseString(response.data, (err, res) => {
+          let newItem = checkInObject(res, 'mbn')
+          storage.pushNewItem(newItem)
+          resolve(newItem)
+        })
+      })
+      .catch(err => {
+        console.log("Error getting new details")
+        reject(id)
+      })
+    })
+  },
+
+  getMultipleNews () {
+    if (this.newsList.length === 0) {
+      return
+    }
+    let id = this.newsList.shift()['i']
+    this.getNewItem(id)
+    .then(() => {
+      this.getMultipleNews()
+    })
+    .catch((id) => {
+      console.log(`Error getting new id:${id}`)
+      this.getMultipleNews()
     })
   },
 
@@ -121,6 +130,19 @@ module.exports = {
     .catch(() => {
       console.log('Authorization Failed')
       this.start()
+    })
+  },
+
+  //----------------REST Requests----------------------------------
+  getNewById (req, res) {
+    let id = req.body.newId
+    console.log(id)
+    this.getNewItem(id)
+    .then(newItem => {
+      res.send(newItem)
+    })
+    .catch(() => {
+      res.sendStatus(404)
     })
   }
 }
