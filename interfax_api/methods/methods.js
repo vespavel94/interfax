@@ -137,11 +137,21 @@ module.exports = {
   getNewById (req, res) {
     let id = req.body.newId
     console.log(id)
-    this.getNewItem(id)
-    .then(newItem => {
-      res.send(newItem)
+    Axios.post(url, templates.xmlGetNewById(id), {
+      headers: {
+        'Content-Type': 'application/soap+xml;charset=UTF-8;action="http://ifx.ru/IFX3WebService/IIFXService/GetEntireNewsByID"',
+        'Cookie': authCookie
+      }
     })
-    .catch(() => {
+    .then(response => {
+      parser.parseString(response.data, (err, result) => {
+        let newItem = checkInObject(result, 'mbn')
+        res.send(newItem)
+      })
+    })
+    .catch(err => {
+      console.log(err)
+      console.log("Error getting new details")
       res.sendStatus(404)
     })
   }
