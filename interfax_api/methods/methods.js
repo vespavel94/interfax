@@ -72,7 +72,6 @@ module.exports = {
         }
         config.updateMarker = checkInObject(result, 'grnmresp').mbnup
         fs.writeFileSync('config.json', JSON.stringify(config))
-        console.log('Update renew')
         setTimeout(() => {
           this.getNewsList()
         }, 60000)
@@ -154,5 +153,48 @@ module.exports = {
       console.log("Error getting new details")
       res.sendStatus(404)
     })
+  },
+
+  getByTicker (req, res) {
+    let ticker = req.body.ticker
+    storage.getNewItem('tickers', ticker)
+    .then(records => {
+      res.json({
+        count: records.length,
+        news: records
+      })
+    })
+    .catch(() => {
+      res.json({
+        error: 'Err getting from database'
+      })
+    })
+  },
+
+  getOFZ (req, res) {
+    storage.getNewItem('body', /ОФЗ/)
+    .then(records => {
+      res.json({
+        count: records.length,
+        news: records
+      })
+    })
+    .catch(() => {
+      res.json({
+        error: 'Err getting from database'
+      })
+    })
   }
+
+  // getOFZ (req, res) {
+  //     storage.news.find({ 'body': /Банк России/ }).sort({ published: -1 }).exec((err, records) => {
+  //       storage.news.find({ 'body': /ОФЗ/ }).sort({ published: -1 }).exec((err, records1) => {
+  //         let array = records.concat(records1)
+  //         res.json({
+  //           count: array.length,
+  //           records: array
+  //         })
+  //       })
+  //     })
+  // }
 }

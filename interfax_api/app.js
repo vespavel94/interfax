@@ -13,6 +13,14 @@ main = () => {
     methods.getNewById(req, res)
   })
 
+  app.get('/get-ofz', (req, res) => {
+    methods.getOFZ(req, res)
+  })
+
+  app.post('/get-news-by-ticker', (req, res) => {
+    methods.getByTicker(req, res)
+  })
+
   app.set('port', process.env.PORT || 4000)
   app.listen(app.get('port'), () => {
     console.log('Server started on ' + app.get('port') + ' port in mode: ' + process.env.NODE_ENV)

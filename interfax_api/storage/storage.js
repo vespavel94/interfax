@@ -24,5 +24,17 @@ module.exports = {
       }
       console.log(`Pushed item ${record.id}`)
     })
+  },
+
+  getNewItem (key, value) {
+    return new Promise((resolve, reject) => {
+      this.news.find({ [key]: value }).sort({ published: -1 }).exec((err, records) => {
+        if (err) {
+          reject()
+        } else {
+          resolve(records)
+        }
+      })
+    })
   }
 }
