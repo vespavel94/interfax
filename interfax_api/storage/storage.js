@@ -14,9 +14,12 @@ module.exports = {
       body: raw.c,
       summary: raw.c.substr(0, 50),
       priority: raw.sp ? raw.sp : null,
-      tickers: raw.rt ? raw.rt['a:string'] : null,
+      tickers: raw.rt ? (Array.isArray(raw.rt['a:string']) ? raw.rt['a:string'] : raw.rt['a:string'].split(',')) : null,
       rubrics: raw.r ? raw.r['a:string'] : null,
       geo: raw.g ? raw.g['a:string'] : null
+    }
+    if (newItem.body.indexOf('Банк России') !== -1 || newItem.body.indexOf('ОФЗ') !== -1) {
+      Array.isArray(newItem.tickers) ? newItem.tickers.push('BOND') : newItem.tickers = ['BOND']
     }
     this.news.insert(newItem, (err, record) => {
       if (err) {

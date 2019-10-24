@@ -150,7 +150,6 @@ module.exports = {
     })
     .catch(err => {
       console.log(err)
-      console.log("Error getting new details")
       res.sendStatus(404)
     })
   },
@@ -172,7 +171,7 @@ module.exports = {
   },
 
   getOFZ (req, res) {
-    storage.getNewItem('body', /ОФЗ/)
+    storage.getNewItem('tickers', 'BOND')
     .then(records => {
       res.json({
         count: records.length,
@@ -185,16 +184,4 @@ module.exports = {
       })
     })
   }
-
-  // getOFZ (req, res) {
-  //     storage.news.find({ 'body': /Банк России/ }).sort({ published: -1 }).exec((err, records) => {
-  //       storage.news.find({ 'body': /ОФЗ/ }).sort({ published: -1 }).exec((err, records1) => {
-  //         let array = records.concat(records1)
-  //         res.json({
-  //           count: array.length,
-  //           records: array
-  //         })
-  //       })
-  //     })
-  // }
 }
