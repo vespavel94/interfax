@@ -10,6 +10,7 @@ let authCookie = null
 let parser = new parseXml.Parser({ explicitArray: false, ignoreAttrs: true })
 
 let a = 'kek'
+let b = 'lolz'
 
 function checkInObject(obj, name) {
   let res = null
