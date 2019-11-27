@@ -9,6 +9,8 @@ const url = 'http://services.ifx.ru/IFXService.svc'
 let authCookie = null
 let parser = new parseXml.Parser({ explicitArray: false, ignoreAttrs: true })
 
+let a = 'kek'
+
 function checkInObject(obj, name) {
   let res = null
   for ( let i in obj ) {
