@@ -11,6 +11,7 @@ let parser = new parseXml.Parser({ explicitArray: false, ignoreAttrs: true })
 
 let a = 'kek'
 let b = 'lolz'
+let c = 'pizdosya'
 
 function checkInObject(obj, name) {
   let res = null
